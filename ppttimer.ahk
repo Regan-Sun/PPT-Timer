@@ -1,4 +1,4 @@
-#Persistent
+﻿#Persistent
 #SingleInstance force
 ;@Ahk2Exe-SetProductName ppttimer
 ;@Ahk2Exe-SetVersion 0.9
