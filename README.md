@@ -1,194 +1,91 @@
-# PPT 计时器
-![ppttimer](ppttimer.png)
+# PPT 计时器 for macOS
 
-[下载](https://github.com/old9/ppttimer/releases)
+这是 [old9/ppttimer](https://github.com/old9/ppttimer) 的原生 macOS 移植版。Windows 版依赖 AutoHotkey；macOS 版使用 Swift、AppKit 和 SwiftUI 重写，不需要安装 PowerPoint 插件。
 
-一个 Windows 下简易的 PowerPoint 计时器，基于 [Autohotkey](http://autohotkey.com)。主要功能：
-* PPT 或任何全屏程序开始播放时，自动开始倒计时，结束放映或退出全屏时自动停止。
-* 悬浮于最上层，鼠标可穿透，不影响其他操作。
-* 字体和透明等可通过参数调节。
-* 可手动开始停止计时器。
+## 下载与安装
 
-代码基于 [Yet Another CountDown Script](http://www.autohotkey.com/board/topic/19679-yet-another-countdown-script/) 修改，并参考了 [Countdown timer app](http://www.autohotkey.com/board/topic/57463-countdown-timer-app/)。
+1. 打开 [GitHub Releases](../../releases/latest)。
+2. 下载 `PPTTimer-macOS-universal-v1.0.0.zip` 并解压。
+3. 将 `PPTTimer.app` 拖入“应用程序”文件夹。
+4. 首次启动时在 Finder 中右键 `PPTTimer.app`，选择“打开”，再确认一次“打开”。
 
-屏幕截图：
+应用要求 macOS 13 或更高版本，同时支持 Apple Silicon 和 Intel Mac。当前 Release 使用临时代码签名，未经过 Apple 公证，因此直接双击可能被 Gatekeeper 拦截；右键“打开”只需执行一次。
 
-![Screenshot](screenshot.png)
+## 功能
 
-## 安装使用方法
+- 默认在 PowerPoint 或 Mac WPS 进入全屏放映时自动开始，退出放映时自动停止
+- 可关闭“仅检测 PowerPoint / WPS”，用于 Keynote、浏览器等其他全屏演示
+- 透明置顶的倒计时浮层，可在全屏空间上显示；点击浮层可打开控制菜单
+- 提前提醒、结束声音、超时正计时和闪烁提示
+- 多显示器显示或移动到下一个显示器
+- 计时预设、全局快捷键和原生设置界面
+- 配置自动保存在 macOS 用户偏好设置中
+- 不需要屏幕录制或辅助功能权限
 
-无需安装，[下载](https://github.com/old9/ppttimer/releases)并解压，运行 ppttimer.exe 即可开始使用。
+## 使用
 
-程序启动后会自动侦测 PPT 或其他全屏播放程序，一旦有全屏程序播放，则会自动启动计时器。
+双击应用后不会出现 Dock 图标；计时器和控制入口位于菜单栏下方的右上角。点击计时器浮层可打开开始、停止、重置、设置和退出菜单。
 
-也可以通过预设快捷键手动启动计时器，默认的快捷键设置为：
+仅打开演示文稿不会开始计时，必须进入幻灯片放映：
 
-* 开始计时 `F12`
-* 停止计时 `Ctrl + F12`
-* 暂停/恢复计时 `Ctrl + F11`
-* 重置计时器 `Ctrl + Alt + F12`
-* 在所有显示器显示计时器 `Ctrl + Win + A`
-* 将计时器移动到下一个显示器 `Ctrl + Win + M`
-* 载入计时预设 `Ctrl + Win + F1`~`F9`
-* 载入默认计时预设 `Ctrl + Win + F10`
-* 退出程序 `Win + ESC`
- 
-系统托盘菜单提供更多功能，也可按下 `Ctrl` 键时右键点击计时器窗口呼出快捷菜单。
+- PowerPoint：选择“幻灯片放映 → 从头开始播放”。首次检测时，允许 PPTTimer 控制 Microsoft PowerPoint。
+- Mac WPS：进入原生 Mac WPS 的全屏幻灯片放映。
+- 窗口化放映或未被识别的演示程序：按 `F12` 手动开始。
 
-更多设置可通过 `ppttimer.ini` 配置文件设定。
+退出放映后计时自动停止。计时器浮层会避开菜单栏，并在放映时提升到全屏窗口之上。
 
-## ini 参数配置说明
+## 快捷键
 
-ini文件使用编码 `UTF-16LE-BOM` 以支持 Unicode，具体设置项可参考注释。
+| 操作 | 快捷键 |
+|---|---|
+| 开始计时 | `F12` |
+| 停止计时 | `Control + F12` |
+| 暂停/恢复 | `Control + F11` |
+| 重置 | `Control + Option + F12` |
+| 移至下个显示器 | `Control + Command + M` |
+| 在所有显示器显示 | `Control + Command + A` |
+| 载入预设 1–6 | `Control + Command + F1–F6` |
+| 退出 | `Command + Esc` |
 
-```ini
+如果 Mac 将功能键设置为亮度、音量等系统控制，需要同时按 `Fn`，或在“系统设置 → 键盘”中启用“将 F1、F2 等键用作标准功能键”。
 
-[Main]
-;时间设置
-;倒计时时间，单位秒，默认为 1200 秒即 20 分钟。
-Duration=1200
-;提前提醒时间，单位秒。默认为 120 秒即 2 分钟。
-Ahead=120
+## 自动检测说明
 
-;提醒设置
-;提前提醒时是否播放声音及声音路径
-PlayWarningSound=1
-WarningSoundFile=.\beep.mp3
-PlayFinishSound=1
-FinishSoundFile=.\applause.mp3
+默认启用“仅检测 PowerPoint / WPS”，只响应 Microsoft PowerPoint 和原生 Mac WPS Office 的幻灯片放映。关闭该选项后，Keynote、浏览器全屏演示等占满显示器的窗口也可以触发计时。
 
-;窗口样式
-;透明度
-opacity=180
-;窗口背景色
-backgroundColor=FFFFAA
-;窗口大小，位置固定在右上角
-width=200
-height=60
-;窗口位置，左上 LT，中上 MT，右上 RT，左下 LB，中下 MB， 右下 RB
-position=RT
-;窗口距离屏幕边缘距离
-margin=0
-;字体样式
-fontface=Microsoft Yahei
-fontweight=bold
-fontsize=24
-textcolor=000000
+PowerPoint 的窗口化放映不会占满屏幕，无法可靠地与普通编辑窗口区分；这种模式请按 `F12` 手动开始。手动开始后，默认会暂停自动检测，避免窗口状态打断计时。
 
-;提前提醒时的字体颜色
-AheadColor=9D1000
+## 从源码构建
 
-;超时后的字体颜色
-timeoutColor=FF0000
+要求 macOS 13 或更高版本，并安装 Xcode Command Line Tools 或 Xcode。
 
-;手动模式计时时，是否屏蔽自动检测计时功能
-manualModeSupressDetection=1
-
-;计时器停止时是否重置
-stopResetsTimer=0
-
-;计时器停止时是否发送按键，可用于关闭正在演示的程序。0不发送，其他值按逗号分割后顺序发送
-;按键参考 https://www.autohotkey.com/docs/v1/lib/Send.htm
-sendOnTimeout=0
-
-; 不会被自动检测的可执行文件名，适用于需要全屏但不想被计时器检测到的程序，如chrome.exe等。值为逗号分隔的可执行文件名列表，不带路径。
-; exclusionExeList=chrome.exe
-
-; 不会被自动检测的窗口类名。值为逗号分隔的字符串列表，窗口类名等于任一字符串即视为匹配。
-; exclusionClassList=
-
-; 不会被自动检测的窗口标题。值为逗号分隔的字符串列表，窗口标题等于任一字符串即视为匹配。
-;exclusionTitleList=
-
-; log级别，0不输出日志，1输出错误日志，2输出调试日志，默认为0
-; debugLevel=2
-
-[Profile_1]
-; 多组计时
-; 可使用 Profile_N 的方式命名，最多 9 组
-; 采用覆盖 Main 中设置的方式配置，Main 中选项都适用于 Profile 中
-
-; 配置名称，可选，将显示为菜单名
-name=10分钟
-
-Duration=600
-Ahead=60
-PlayWarningSound=0
-PlayFinishSound=1
-
-[Profile_2]
-name=1小时
-Duration=3600
-Ahead=300
-
-[Profile_3]
-name=10秒测试
-Duration=10
-Ahead=3
-
-[Profile_4]
-name=样式示例
-opacity=200
-fontface=Bahnschrift
-fontweight=bold
-fontsize=32
-width=250
-height=80
-textcolor=001E5E
-backgroundColor=A5EFFF
-
-[Profile_5]
-name=隐藏
-opacity=0
-Duration=72000
-PlayWarningSound=0
-PlayFinishSound=0
-
-[Profile_6]
-name=测试计时结束发送按键
-Duration=5
-Ahead=0
-PlayWarningSound=0
-PlayFinishSound=0
-;ESC 退出，win+d显示桌面
-sendOnTimeout={ESC},#d
-
-[Status]
-; 会保存状态的设定
-
-;在所有显示器显示
-showOnAllMonitors=0
-;最后一次显示的显示器
-lastMonitor=1
-;当前启用的配置，0为默认配置
-lastProfile=0
-
-[shortcuts]
-;快捷键设置，^ Ctrl，# Windows，+ Shift，! Alt。
-;开始手动计时
-startKey=F12
-;停止计时器
-stopKey=^F12
-;暂停计时器
-pauseKey=^F11
-;重置计时器
-resetKey=^!F12
-;移动到下一个显示器
-moveKey=^#M
-;切换在所有显示器显示
-allMonitorKey=^#A
-;退出主程序
-quitKey=#ESC
+```bash
+./scripts/build_app.sh
 ```
 
-## 编译方法
-* 至 [Autohotkey 主页](https://autohotkey.com) 下载 Autohotkey 并安装。
-* 使用安装后自带的编译打包工具 `Compiler\Ahk2Exe.exe` 使用 Unicode 版本编译 ahk 文件。
+脚本会运行 Release 构建、生成应用图标、复制声音资源、创建临时代码签名，并输出同时支持 Apple Silicon 与 Intel Mac 的通用 `PPTTimer.app`。
 
-## TODO
+运行测试：
 
-* 更多可控制的参数
+```bash
+swift test
+```
 
-## licence
+## 项目结构
 
-Licensed under the MIT.
+- `Sources/PPTTimer/`：macOS 原生应用源码
+- `Tests/PPTTimerTests/`：计时格式、配置和全屏判定测试
+- `scripts/build_app.sh`：通用 `.app` 打包脚本
+- `ppttimer_v2.ahk`：原项目的 Windows AutoHotkey 源码
+- `beep.mp3`、`applause.mp3`：沿用原项目提示音
+
+## 来源与致谢
+
+- 原始 Windows 项目：[old9/ppttimer](https://github.com/old9/ppttimer)
+- 原始 AutoHotkey 源码、提示音和项目思路来自上述项目
+- macOS 原生移植、通用二进制构建、测试与发布由 [OpenAI Codex](https://openai.com/codex/) 协助完成
+- Fork 中保留原始提交历史，GitHub 会显示与上游项目的来源关系
+
+## License
+
+MIT，见 [LICENSE.txt](LICENSE.txt)。

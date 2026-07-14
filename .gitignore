@@ -1,3 +1,8 @@
-build
-.tmp
+.build/
+dist/
+release/
+.DS_Store
+*.xcuserstate
+build/
+.tmp/
 ppttimer_debug.log
