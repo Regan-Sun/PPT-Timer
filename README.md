@@ -2,6 +2,12 @@
 
 这是 [old9/ppttimer](https://github.com/old9/ppttimer) 的原生 macOS 移植版。Windows 版依赖 AutoHotkey；macOS 版使用 Swift、AppKit 和 SwiftUI 重写，不需要安装 PowerPoint 插件。
 
+## 作者与说明
+
+**作者：孙煦明**
+
+本仓库是 `old9/ppttimer` 的 macOS 原生移植与增强版，在保留原项目来源和 MIT 许可证的基础上，加入了可拖动计时浮层、自定义快捷键和多显示器适配等功能。
+
 ## 下载与安装
 
 1. 打开 [GitHub Releases](../../releases/latest)。
@@ -87,8 +93,9 @@ PowerPoint 的窗口化放映不会占满屏幕，无法可靠地与普通编辑
 
 - 原始 Windows 项目：[old9/ppttimer](https://github.com/old9/ppttimer)
 - 原始 AutoHotkey 源码、提示音和项目思路来自上述项目
-- macOS 原生移植、通用二进制构建、测试与发布由 [OpenAI Codex](https://openai.com/codex/) 协助完成
-- Fork 中保留原始提交历史，GitHub 会显示与上游项目的来源关系
+- macOS 版本作者：孙煦明
+- macOS 原生移植、通用二进制构建、测试与发布由孙煦明完成，[OpenAI Codex](https://openai.com/codex/) 提供开发协助
+- 仓库保留原始提交历史与上游链接，便于追溯代码来源
 
 ## License
 
