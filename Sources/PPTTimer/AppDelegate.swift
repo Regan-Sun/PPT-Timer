@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private weak var startItem: NSMenuItem?
     private weak var stopItem: NSMenuItem?
     private weak var pauseItem: NSMenuItem?
+    private weak var resetItem: NSMenuItem?
     private weak var detectionItem: NSMenuItem?
     private weak var powerPointOnlyItem: NSMenuItem?
     private weak var allDisplaysItem: NSMenuItem?
@@ -64,6 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.overlay.lowerForControlMenu()
             self?.statusItem?.button?.performClick(nil)
         }
+        overlay.onPositionChange = { [weak self] placement in
+            guard let self else { return }
+            self.configuration.customPosition = placement
+            self.store.save(self.configuration)
+        }
         countdown.onDisplayChange = { [weak self] display in
             guard let self else { return }
             self.lastDisplay = display
@@ -83,11 +89,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func configureStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "PPT 计时器")
+        item.button?.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "PPT-Timer")
         item.button?.imagePosition = .imageLeading
         item.button?.title = " " + lastDisplay.formattedTime
 
-        let menu = NSMenu(title: "PPT 计时器")
+        let menu = NSMenu(title: "PPT-Timer")
         menu.delegate = self
 
         let detectedItem = NSMenuItem(title: "等待全屏放映", action: nil, keyEquivalent: "")
@@ -96,14 +102,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         detectedApplicationItem = detectedItem
 
-        let start = menuItem("开始计时", shortcut: "F12", action: #selector(startManually))
-        let stop = menuItem("停止计时", shortcut: "⌃F12", action: #selector(stopManually))
-        let pause = menuItem("暂停/恢复", shortcut: "⌃F11", action: #selector(togglePause))
-        let reset = menuItem("重置", shortcut: "⌃⌥F12", action: #selector(resetTimer))
+        let shortcuts = configuration.effectiveShortcuts
+        let start = menuItem("开始计时", shortcut: shortcuts.start.displayString, action: #selector(startManually))
+        let stop = menuItem("停止计时", shortcut: shortcuts.stop.displayString, action: #selector(stopManually))
+        let pause = menuItem("暂停/恢复", shortcut: shortcuts.pause.displayString, action: #selector(togglePause))
+        let reset = menuItem("重置", shortcut: shortcuts.reset.displayString, action: #selector(resetTimer))
         [start, stop, pause, reset].forEach(menu.addItem)
         startItem = start
         stopItem = stop
         pauseItem = pause
+        resetItem = reset
         menu.addItem(.separator())
 
         let presetMenu = NSMenu(title: "计时预设")
@@ -139,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(menuItem("设置…", shortcut: "", action: #selector(showSettings)))
-        menu.addItem(menuItem("关于 PPT 计时器", shortcut: "", action: #selector(showAbout)))
+        menu.addItem(menuItem("关于 PPT-Timer", shortcut: "", action: #selector(showAbout)))
         menu.addItem(.separator())
         menu.addItem(menuItem("退出", shortcut: "⌘Esc", action: #selector(quit)))
 
@@ -157,8 +165,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func configureHotKeys() {
-        hotKeyManager = HotKeyManager { [weak self] action in
+        let requested = configuration.effectiveShortcuts
+        let manager = HotKeyManager(shortcuts: requested) { [weak self] action in
             Task { @MainActor in self?.handleHotKey(action) }
+        }
+        hotKeyManager = manager
+        if manager.activeCustomShortcuts != requested {
+            configuration.shortcuts = manager.activeCustomShortcuts
+            store.save(configuration)
+            updateMenuState()
         }
     }
 
@@ -272,7 +287,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showSettings() {
         if settingsController == nil {
             settingsController = SettingsWindowController(configuration: configuration) { [weak self] newConfiguration in
-                self?.applyConfiguration(newConfiguration)
+                self?.applySettingsConfiguration(newConfiguration) ?? "PPT-Timer 已关闭，设置未保存。"
             }
         }
         settingsController?.show(configuration: configuration)
@@ -280,7 +295,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func showAbout() {
         let alert = NSAlert()
-        alert.messageText = "PPT 计时器 for macOS"
+        alert.messageText = "PPT-Timer for macOS"
         alert.informativeText = "原生菜单栏倒计时工具。可自动检测 PowerPoint 或其他全屏放映，并在所有桌面空间显示计时浮层。"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "好")
@@ -295,6 +310,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func applyConfiguration(_ newConfiguration: TimerConfiguration) {
         var normalized = newConfiguration
         normalized.normalize()
+        if normalized.position != configuration.position || normalized.margin != configuration.margin {
+            normalized.customPosition = nil
+        }
         let durationChanged = normalized.duration != configuration.duration
         configuration = normalized
         store.save(normalized)
@@ -305,9 +323,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateMenuState()
     }
 
+    private func applySettingsConfiguration(_ newConfiguration: TimerConfiguration) -> String? {
+        var normalized = newConfiguration
+        normalized.normalize()
+        let requested = normalized.effectiveShortcuts
+        if requested != configuration.effectiveShortcuts,
+           let error = hotKeyManager?.updateCustomShortcuts(requested) {
+            return error.message
+        }
+        applyConfiguration(normalized)
+        return nil
+    }
+
     private func updateStatusItem(_ display: CountdownDisplay) {
         statusItem?.button?.title = " " + display.formattedTime
-        statusItem?.button?.toolTip = "PPT 计时器：\(display.formattedTime)"
+        statusItem?.button?.toolTip = "PPT-Timer：\(display.formattedTime)"
         UserDefaults.standard.set(display.remaining, forKey: "PPTTimer.diagnostics.remaining")
         UserDefaults.standard.set(
             display.state == .running ? "running" : display.state == .paused ? "paused" : "stopped",
@@ -327,15 +357,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateMenuState() {
+        let shortcuts = configuration.effectiveShortcuts
         startItem?.isEnabled = countdown.state != .running
+        startItem?.title = menuTitle("开始计时", shortcut: shortcuts.start.displayString)
         stopItem?.isEnabled = countdown.state != .stopped
+        stopItem?.title = menuTitle("停止计时", shortcut: shortcuts.stop.displayString)
         pauseItem?.isEnabled = countdown.state != .stopped
-        pauseItem?.title = countdown.state == .paused ? "继续计时\t⌃F11" : "暂停计时\t⌃F11"
+        pauseItem?.title = menuTitle(
+            countdown.state == .paused ? "继续计时" : "暂停计时",
+            shortcut: shortcuts.pause.displayString
+        )
+        resetItem?.title = menuTitle("重置", shortcut: shortcuts.reset.displayString)
         detectionItem?.state = configuration.automaticDetection ? .on : .off
         powerPointOnlyItem?.state = configuration.powerPointOnly ? .on : .off
         powerPointOnlyItem?.isEnabled = configuration.automaticDetection
         allDisplaysItem?.state = configuration.showOnAllDisplays ? .on : .off
         detectedApplicationItem?.title = detectedWindow.map { "已检测：\($0.applicationName)" }
             ?? (configuration.automaticDetection ? "等待全屏放映" : "自动检测已关闭")
+    }
+
+    private func menuTitle(_ title: String, shortcut: String) -> String {
+        shortcut.isEmpty ? title : "\(title)\t\(shortcut)"
     }
 }

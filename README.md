@@ -1,13 +1,13 @@
-# PPT 计时器 for macOS
+# PPT-Timer for macOS
 
 这是 [old9/ppttimer](https://github.com/old9/ppttimer) 的原生 macOS 移植版。Windows 版依赖 AutoHotkey；macOS 版使用 Swift、AppKit 和 SwiftUI 重写，不需要安装 PowerPoint 插件。
 
 ## 下载与安装
 
 1. 打开 [GitHub Releases](../../releases/latest)。
-2. 下载 `PPTTimer-macOS-universal-v1.0.0.zip` 并解压。
-3. 将 `PPTTimer.app` 拖入“应用程序”文件夹。
-4. 首次启动时在 Finder 中右键 `PPTTimer.app`，选择“打开”，再确认一次“打开”。
+2. 下载并解压 `PPT-Timer-v1.2.0.zip`。
+3. 将 `PPT-Timer.app` 拖入“应用程序”文件夹。
+4. 首次启动时在 Finder 中右键 `PPT-Timer.app`，选择“打开”，再确认一次“打开”。
 
 应用要求 macOS 13 或更高版本，同时支持 Apple Silicon 和 Intel Mac。当前 Release 使用临时代码签名，未经过 Apple 公证，因此直接双击可能被 Gatekeeper 拦截；右键“打开”只需执行一次。
 
@@ -15,20 +15,22 @@
 
 - 默认在 PowerPoint 或 Mac WPS 进入全屏放映时自动开始，退出放映时自动停止
 - 可关闭“仅检测 PowerPoint / WPS”，用于 Keynote、浏览器等其他全屏演示
-- 透明置顶的倒计时浮层，可在全屏空间上显示；点击浮层可打开控制菜单
+- 透明置顶的倒计时浮层，可在全屏空间上显示；拖动浮层可改变位置，轻点仍打开控制菜单
+- 拖动位置会按屏幕相对坐标保存，重启、分辨率变化和多显示器模式下仍保持在可视区域内
 - 提前提醒、结束声音、超时正计时和闪烁提示
 - 多显示器显示或移动到下一个显示器
 - 计时预设、全局快捷键和原生设置界面
+- 开始、停止、暂停/恢复、重置四项全局快捷键均可在“设置 → 快捷键”中自定义
 - 配置自动保存在 macOS 用户偏好设置中
 - 不需要屏幕录制或辅助功能权限
 
 ## 使用
 
-双击应用后不会出现 Dock 图标；计时器和控制入口位于菜单栏下方的右上角。点击计时器浮层可打开开始、停止、重置、设置和退出菜单。
+双击应用后不会出现 Dock 图标；计时器和控制入口默认位于菜单栏下方的右上角。直接拖动浮层可改变位置，轻点浮层可打开开始、停止、重置、设置和退出菜单。切换设置中的固定位置会清除手动拖动位置。
 
 仅打开演示文稿不会开始计时，必须进入幻灯片放映：
 
-- PowerPoint：选择“幻灯片放映 → 从头开始播放”。首次检测时，允许 PPTTimer 控制 Microsoft PowerPoint。
+- PowerPoint：选择“幻灯片放映 → 从头开始播放”。首次检测时，允许 PPT-Timer 控制 Microsoft PowerPoint。
 - Mac WPS：进入原生 Mac WPS 的全屏幻灯片放映。
 - 窗口化放映或未被识别的演示程序：按 `F12` 手动开始。
 
@@ -49,6 +51,8 @@
 
 如果 Mac 将功能键设置为亮度、音量等系统控制，需要同时按 `Fn`，或在“系统设置 → 键盘”中启用“将 F1、F2 等键用作标准功能键”。
 
+开始、停止、暂停/恢复、重置的快捷键可以在“设置 → 快捷键”中点击按键框后直接录入。四项不能重复，也不能占用预设、显示器切换和退出等固定快捷键；需要时可一键恢复默认值。
+
 ## 自动检测说明
 
 默认启用“仅检测 PowerPoint / WPS”，只响应 Microsoft PowerPoint 和原生 Mac WPS Office 的幻灯片放映。关闭该选项后，Keynote、浏览器全屏演示等占满显示器的窗口也可以触发计时。
@@ -63,12 +67,12 @@ PowerPoint 的窗口化放映不会占满屏幕，无法可靠地与普通编辑
 ./scripts/build_app.sh
 ```
 
-脚本会运行 Release 构建、生成应用图标、复制声音资源、创建临时代码签名，并输出同时支持 Apple Silicon 与 Intel Mac 的通用 `PPTTimer.app`。
+脚本会运行 Release 构建、生成应用图标、复制声音资源、创建临时代码签名，并输出同时支持 Apple Silicon 与 Intel Mac 的通用 `PPT-Timer.app`。
 
 运行测试：
 
 ```bash
-swift test
+./scripts/test.sh
 ```
 
 ## 项目结构

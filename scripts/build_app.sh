@@ -2,9 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="${0:A:h:h}"
-APP_DIR="$ROOT_DIR/dist/PPTTimer.app"
+APP_DIR="$ROOT_DIR/dist/PPT-Timer.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 ICON_FILE="$CONTENTS_DIR/Resources/PPTTimer.icns"
+ICON_SOURCE="$ROOT_DIR/Resources/PPTTimerIconSource.png"
 export CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT_DIR/.build/ModuleCache"
 
@@ -24,7 +25,7 @@ cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp "$ROOT_DIR/beep.mp3" "$CONTENTS_DIR/Resources/beep.mp3"
 cp "$ROOT_DIR/applause.mp3" "$CONTENTS_DIR/Resources/applause.mp3"
 
-swift "$ROOT_DIR/scripts/generate_icon.swift" "$ICON_FILE"
+swift "$ROOT_DIR/scripts/generate_icon.swift" "$ICON_SOURCE" "$ICON_FILE"
 
 chmod +x "$CONTENTS_DIR/MacOS/PPTTimer"
 codesign --force --deep --sign - "$APP_DIR"

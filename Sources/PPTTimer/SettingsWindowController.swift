@@ -4,7 +4,8 @@ import SwiftUI
 @MainActor
 final class SettingsViewModel: ObservableObject {
     @Published var configuration: TimerConfiguration
-    var onSave: ((TimerConfiguration) -> Void)?
+    @Published var saveError: String?
+    var onSave: ((TimerConfiguration) -> String?)?
     var onClose: (() -> Void)?
 
     init(configuration: TimerConfiguration) {
@@ -12,12 +13,24 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func save() {
+        if let validationError = shortcutValidationError {
+            saveError = validationError.message
+            return
+        }
         configuration.normalize()
-        onSave?(configuration)
+        if let error = onSave?(configuration) {
+            saveError = error
+            return
+        }
+        saveError = nil
         onClose?()
     }
 
     func cancel() { onClose?() }
+
+    var shortcutValidationError: TimerShortcutValidationError? {
+        TimerShortcutValidator.validationError(for: configuration.effectiveShortcuts)
+    }
 }
 
 struct SettingsView: View {
@@ -43,6 +56,31 @@ struct SettingsView: View {
                 }
                 .padding(20)
                 .tabItem { Label("计时", systemImage: "timer") }
+
+                Form {
+                    Section("全局快捷键") {
+                        shortcutRow("开始计时", action: .start)
+                        shortcutRow("停止计时", action: .stop)
+                        shortcutRow("暂停/恢复", action: .pause)
+                        shortcutRow("重置", action: .reset)
+                        Button("恢复默认") {
+                            var configuration = model.configuration
+                            configuration.shortcuts = .defaults
+                            model.configuration = configuration
+                            model.saveError = nil
+                        }
+                    }
+                    Text("点击按键框后直接按下新组合；Esc 取消录入。F1–F19 可单独使用，普通按键需搭配 Control、Option 或 Command。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    if let error = model.saveError ?? model.shortcutValidationError?.message {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding(20)
+                .tabItem { Label("快捷键", systemImage: "keyboard") }
 
                 Form {
                     Section("自动开始") {
@@ -120,10 +158,36 @@ struct SettingsView: View {
                     model.save()
                 }
                 .keyboardShortcut(.defaultAction)
+                .disabled(model.shortcutValidationError != nil)
             }
             .padding(14)
         }
-        .frame(width: 540, height: 470)
+        .frame(width: 560, height: 500)
+    }
+
+    @ViewBuilder
+    private func shortcutRow(_ title: String, action: CustomHotKeyAction) -> some View {
+        LabeledContent(title) {
+            HotKeyRecorder(
+                binding: shortcutBinding(for: action),
+                onError: { model.saveError = $0 }
+            )
+            .frame(width: 180, height: 26)
+        }
+    }
+
+    private func shortcutBinding(for action: CustomHotKeyAction) -> Binding<HotKeyBinding> {
+        Binding(
+            get: { model.configuration.effectiveShortcuts.binding(for: action) },
+            set: { captured in
+                var configuration = model.configuration
+                var shortcuts = configuration.effectiveShortcuts
+                shortcuts.set(captured, for: action)
+                configuration.shortcuts = shortcuts
+                model.configuration = configuration
+                model.saveError = nil
+            }
+        )
     }
 
     @ViewBuilder
@@ -151,12 +215,12 @@ struct SettingsView: View {
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let model: SettingsViewModel
 
-    init(configuration: TimerConfiguration, onSave: @escaping (TimerConfiguration) -> Void) {
+    init(configuration: TimerConfiguration, onSave: @escaping (TimerConfiguration) -> String?) {
         model = SettingsViewModel(configuration: configuration)
         model.onSave = onSave
         let hostingController = NSHostingController(rootView: SettingsView(model: model))
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "PPT 计时器设置"
+        window.title = "PPT-Timer 设置"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         window.center()
@@ -169,6 +233,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     func show(configuration: TimerConfiguration) {
         model.configuration = configuration
+        model.saveError = nil
         showWindow(nil)
         window?.center()
         NSApp.activate(ignoringOtherApps: true)

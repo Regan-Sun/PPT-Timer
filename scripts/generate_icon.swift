@@ -1,14 +1,28 @@
 import AppKit
 import Foundation
 
-guard CommandLine.arguments.count == 2 else {
-    fputs("usage: generate_icon.swift <output.icns>\n", stderr)
+guard CommandLine.arguments.count == 3 else {
+    fputs("usage: generate_icon.swift <source.png> <output.icns>\n", stderr)
     exit(2)
 }
 
-let outputURL = URL(fileURLWithPath: CommandLine.arguments[1])
+let sourceURL = URL(fileURLWithPath: CommandLine.arguments[1])
+let outputURL = URL(fileURLWithPath: CommandLine.arguments[2])
+let sourceData = try Data(contentsOf: sourceURL)
 
-func drawIcon(pixels: Int) throws -> Data {
+guard let sourceImage = NSImage(data: sourceData),
+      let sourceRepresentation = sourceImage.representations.first,
+      sourceRepresentation.pixelsWide > 0,
+      sourceRepresentation.pixelsWide == sourceRepresentation.pixelsHigh else {
+    fputs("icon source must be a square image\n", stderr)
+    exit(1)
+}
+sourceImage.size = NSSize(
+    width: sourceRepresentation.pixelsWide,
+    height: sourceRepresentation.pixelsHigh
+)
+
+func resizedPNG(pixels: Int) throws -> Data {
     guard let bitmap = NSBitmapImageRep(
         bitmapDataPlanes: nil,
         pixelsWide: pixels,
@@ -22,78 +36,69 @@ func drawIcon(pixels: Int) throws -> Data {
         bitsPerPixel: 0
     ) else { throw CocoaError(.fileWriteUnknown) }
 
-    let scale = CGFloat(pixels)
     NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
-
-    NSColor.clear.setFill()
-    NSRect(x: 0, y: 0, width: scale, height: scale).fill()
-
-    let outer = NSBezierPath(
-        roundedRect: NSRect(x: scale * 0.06, y: scale * 0.06, width: scale * 0.88, height: scale * 0.88),
-        xRadius: scale * 0.19,
-        yRadius: scale * 0.19
-    )
-    NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.24, alpha: 1).setFill()
-    outer.fill()
-
-    let display = NSBezierPath(
-        roundedRect: NSRect(x: scale * 0.13, y: scale * 0.25, width: scale * 0.74, height: scale * 0.5),
-        xRadius: scale * 0.09,
-        yRadius: scale * 0.09
-    )
-    NSColor(calibratedWhite: 0.11, alpha: 1).setFill()
-    display.fill()
-
-    if pixels >= 64 {
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: scale * 0.205, weight: .bold),
-            .foregroundColor: NSColor.white,
-            .paragraphStyle: paragraph
-        ]
-        NSString(string: "20:00").draw(
-            in: NSRect(x: scale * 0.13, y: scale * 0.385, width: scale * 0.74, height: scale * 0.25),
-            withAttributes: attributes
-        )
-    } else {
-        NSColor.white.setFill()
-        NSBezierPath(ovalIn: NSRect(x: scale * 0.31, y: scale * 0.44, width: scale * 0.12, height: scale * 0.12)).fill()
-        NSBezierPath(ovalIn: NSRect(x: scale * 0.57, y: scale * 0.44, width: scale * 0.12, height: scale * 0.12)).fill()
+    defer { NSGraphicsContext.restoreGraphicsState() }
+    guard let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+        throw CocoaError(.fileWriteUnknown)
     }
+    NSGraphicsContext.current = context
+    context.imageInterpolation = .high
+    NSColor.clear.setFill()
+    NSRect(x: 0, y: 0, width: pixels, height: pixels).fill()
+    sourceImage.draw(
+        in: NSRect(x: 0, y: 0, width: pixels, height: pixels),
+        from: NSRect(origin: .zero, size: sourceImage.size),
+        operation: .copy,
+        fraction: 1,
+        respectFlipped: false,
+        hints: [.interpolation: NSImageInterpolation.high]
+    )
 
-    NSGraphicsContext.restoreGraphicsState()
     guard let data = bitmap.representation(using: .png, properties: [:]) else {
         throw CocoaError(.fileWriteUnknown)
     }
     return data
 }
 
-func bigEndian(_ value: UInt32) -> Data {
-    var value = value.bigEndian
-    return Data(bytes: &value, count: MemoryLayout<UInt32>.size)
-}
+let temporaryRoot = URL(fileURLWithPath: NSTemporaryDirectory())
+    .appendingPathComponent("ppt-timer-icon-\(UUID().uuidString)", isDirectory: true)
+let iconsetURL = temporaryRoot.appendingPathComponent("PPTTimer.iconset", isDirectory: true)
+let temporaryOutputURL = temporaryRoot.appendingPathComponent("PPTTimer.icns")
+try FileManager.default.createDirectory(at: iconsetURL, withIntermediateDirectories: true)
+defer { try? FileManager.default.removeItem(at: temporaryRoot) }
 
-let entries: [(type: String, pixels: Int)] = [
-    ("ic10", 1_024),
-    ("ic09", 512),
-    ("ic08", 256),
-    ("ic07", 128),
-    ("icp6", 64),
-    ("icp5", 32),
-    ("icp4", 16)
+let entries: [(fileName: String, pixels: Int)] = [
+    ("icon_16x16.png", 16),
+    ("icon_16x16@2x.png", 32),
+    ("icon_32x32.png", 32),
+    ("icon_32x32@2x.png", 64),
+    ("icon_128x128.png", 128),
+    ("icon_128x128@2x.png", 256),
+    ("icon_256x256.png", 256),
+    ("icon_256x256@2x.png", 512),
+    ("icon_512x512.png", 512),
+    ("icon_512x512@2x.png", 1_024)
 ]
 
-var chunks = Data()
 for entry in entries {
-    let png = try drawIcon(pixels: entry.pixels)
-    chunks.append(entry.type.data(using: .ascii)!)
-    chunks.append(bigEndian(UInt32(png.count + 8)))
-    chunks.append(png)
+    try resizedPNG(pixels: entry.pixels).write(
+        to: iconsetURL.appendingPathComponent(entry.fileName),
+        options: .atomic
+    )
 }
 
-var icns = Data("icns".utf8)
-icns.append(bigEndian(UInt32(chunks.count + 8)))
-icns.append(chunks)
-try icns.write(to: outputURL, options: .atomic)
+let iconutil = Process()
+iconutil.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
+iconutil.arguments = ["-c", "icns", iconsetURL.path, "-o", temporaryOutputURL.path]
+iconutil.standardError = FileHandle.standardError
+try iconutil.run()
+iconutil.waitUntilExit()
+guard iconutil.terminationStatus == 0 else {
+    fputs("iconutil failed with status \(iconutil.terminationStatus)\n", stderr)
+    exit(iconutil.terminationStatus)
+}
+
+if FileManager.default.fileExists(atPath: outputURL.path) {
+    try FileManager.default.removeItem(at: outputURL)
+}
+try FileManager.default.moveItem(at: temporaryOutputURL, to: outputURL)

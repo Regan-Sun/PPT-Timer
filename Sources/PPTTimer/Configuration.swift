@@ -23,6 +23,16 @@ enum OverlayPosition: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+struct OverlayPlacement: Codable, Equatable {
+    var xFraction: Double
+    var yFraction: Double
+
+    mutating func normalize() {
+        xFraction = min(max(xFraction, 0), 1)
+        yFraction = min(max(yFraction, 0), 1)
+    }
+}
+
 struct TimerConfiguration: Codable, Equatable {
     var duration: Int = 1_200
     var warningTime: Int = 120
@@ -46,9 +56,15 @@ struct TimerConfiguration: Codable, Equatable {
     var height = 60.0
     var position = OverlayPosition.topRight
     var margin = 8.0
+    var customPosition: OverlayPlacement?
 
     var showOnAllDisplays = false
     var selectedDisplay = 0
+    var shortcuts: TimerShortcutBindings?
+
+    var effectiveShortcuts: TimerShortcutBindings {
+        shortcuts ?? .defaults
+    }
 
     mutating func normalize() {
         duration = min(max(duration, 1), 359_999)
@@ -59,6 +75,12 @@ struct TimerConfiguration: Codable, Equatable {
         height = min(max(height, 36), 400)
         margin = min(max(margin, 0), 400)
         selectedDisplay = max(selectedDisplay, 0)
+        customPosition?.normalize()
+        var normalizedShortcuts = effectiveShortcuts
+        normalizedShortcuts.normalize()
+        shortcuts = TimerShortcutValidator.validationError(for: normalizedShortcuts) == nil
+            ? normalizedShortcuts
+            : .defaults
 
         backgroundColor = Self.validHex(backgroundColor, fallback: "FFFFAA")
         textColor = Self.validHex(textColor, fallback: "000000")
