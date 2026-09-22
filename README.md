@@ -10,12 +10,13 @@
 
 ## 下载与安装
 
-1. 打开 [GitHub Releases](../../releases/latest)。
-2. 下载并解压 `PPT-Timer-v1.2.0.zip`。
-3. 将 `PPT-Timer.app` 拖入“应用程序”文件夹。
-4. 首次启动时在 Finder 中右键 `PPT-Timer.app`，选择“打开”，再确认一次“打开”。
+当前仓库尚未发布可直接安装的 macOS 应用包。请先下载源码，再在 macOS 上构建：
 
-应用要求 macOS 13 或更高版本，同时支持 Apple Silicon 和 Intel Mac。当前 Release 使用临时代码签名，未经过 Apple 公证，因此直接双击可能被 Gatekeeper 拦截；右键“打开”只需执行一次。
+1. [下载完整源码（ZIP）](https://github.com/Regan-Sun/PPT-Timer/archive/refs/heads/main.zip)，然后解压。
+2. 在终端进入解压后的项目目录，按[从源码构建](#从源码构建)运行测试和构建脚本。
+3. 构建成功后，将 `dist/PPT-Timer.app` 拖入“应用程序”文件夹。
+
+应用要求 macOS 13 或更高版本。构建脚本会生成支持 Apple Silicon 和 Intel Mac 的通用应用，使用本地临时代码签名（ad hoc），未经过 Apple 公证。
 
 ## 功能
 
@@ -67,18 +68,20 @@ PowerPoint 的窗口化放映不会占满屏幕，无法可靠地与普通编辑
 
 ## 从源码构建
 
-要求 macOS 13 或更高版本，并安装 Xcode Command Line Tools 或 Xcode。
+要求 macOS 13 或更高版本，并安装提供 Swift 6.0 或更高版本工具链的 Xcode Command Line Tools 或 Xcode。下载源码后，在终端进入项目目录，再执行：
 
 ```bash
-./scripts/build_app.sh
+swift --version
+zsh scripts/test.sh
+zsh scripts/build_app.sh
 ```
 
-脚本会运行 Release 构建、生成应用图标、复制声音资源、创建临时代码签名，并输出同时支持 Apple Silicon 与 Intel Mac 的通用 `PPT-Timer.app`。
+脚本会运行 Release 构建、生成应用图标、复制声音资源、创建临时代码签名，并输出同时支持 Apple Silicon 与 Intel Mac 的通用 `dist/PPT-Timer.app`。
 
 运行测试：
 
 ```bash
-./scripts/test.sh
+zsh scripts/test.sh
 ```
 
 ## 项目结构
@@ -94,9 +97,9 @@ PowerPoint 的窗口化放映不会占满屏幕，无法可靠地与普通编辑
 - 原始 Windows 项目：[old9/ppttimer](https://github.com/old9/ppttimer)
 - 原始 AutoHotkey 源码、提示音和项目思路来自上述项目
 - macOS 版本作者：孙煦明
-- macOS 原生移植、通用二进制构建、测试与发布由孙煦明完成，[OpenAI Codex](https://openai.com/codex/) 提供开发协助
+- macOS 原生移植、通用二进制构建与测试由孙煦明完成，[OpenAI Codex](https://openai.com/codex/) 提供开发协助
 - 仓库保留原始提交历史与上游链接，便于追溯代码来源
 
 ## License
 
-MIT，见 [LICENSE.txt](LICENSE.txt)。
+采用 [MIT License](LICENSE.txt)，允许使用、修改、分发和商用；复用时须保留版权与许可证声明。仓库保留上游作者的原始版权声明，来源见上方“来源与致谢”。
